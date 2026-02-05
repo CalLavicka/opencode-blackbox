@@ -2,6 +2,21 @@
   "name": "opencode-blackbox",
   "version": "0.1.0",
   "author": "Cal Lavicka <cal@assert.dev> (https://assert.dev)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CalLavicka/opencode-blackbox.git"
+  },
+  "homepage": "https://github.com/CalLavicka/opencode-blackbox#readme",
+  "bugs": {
+    "url": "https://github.com/CalLavicka/opencode-blackbox/issues"
+  },
+  "keywords": [
+    "opencode",
+    "blackbox",
+    "redaction",
+    "testing",
+    "agent"
+  ],
   "files": [
     "dist",
     "src"
