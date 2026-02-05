@@ -1,6 +1,7 @@
 {
   "name": "opencode-blackbox",
-  "private": true,
+  "version": "0.0.1",
+  "author": "Cal Lavicka <cal@assert.dev> (https://assert.dev)",
   "type": "module",
   "module": "src/index.ts",
   "exports": {
