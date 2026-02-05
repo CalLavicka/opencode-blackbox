@@ -1,7 +1,7 @@
 import {
   SyntaxKind,
+  Node,
   type Expression,
-  type Node,
   type PropertyDeclaration,
   type VariableDeclaration,
 } from 'ts-morph'
@@ -194,11 +194,14 @@ export function redactFile(filePath: string, text: string, window?: LineWindow) 
     }
     if (!isExportedArrowFunction(node)) continue
     const body = node.getBody()
-    if (body.getKind() === SyntaxKind.Block) {
-      redactBlock(body, lines, inline, replace, blocks, 5)
+    const block = body.asKind(SyntaxKind.Block)
+    if (block) {
+      redactBlock(block, lines, inline, replace, blocks, 5)
       continue
     }
-    redactExpression(body as Expression, lines, inline, replace, blocks, 5)
+    if (Node.isExpression(body)) {
+      redactExpression(body, lines, inline, replace, blocks, 5)
+    }
   }
 
   for (const node of file.getDescendantsOfKind(SyntaxKind.FunctionExpression)) {
@@ -231,7 +234,7 @@ function isPublicExportedMember(node: Node) {
   if (!parent.isExported()) return false
   // Use hasModifier if available (for methods, constructors, accessors, properties)
   // because getFirstChildByKind doesn't find modifiers inside the SyntaxList
-  if ('hasModifier' in node && typeof node.hasModifier === 'function') {
+  if (Node.isModifierable(node)) {
     const hasPrivate = node.hasModifier(SyntaxKind.PrivateKeyword)
     const hasProtected = node.hasModifier(SyntaxKind.ProtectedKeyword)
     return !hasPrivate && !hasProtected
@@ -370,10 +373,11 @@ function redactFunctionBody(
     redactBlock(body, lines, inline, replace, blocks, priority)
     return
   }
-  if (node.getKind() === SyntaxKind.ArrowFunction) {
-    const expr = node.asKindOrThrow(SyntaxKind.ArrowFunction).getBody()
-    if (expr.getKind() !== SyntaxKind.Block) {
-      redactExpression(expr as Expression, lines, inline, replace, blocks, priority)
+  const arrow = node.asKind(SyntaxKind.ArrowFunction)
+  if (arrow) {
+    const expr = arrow.getBody()
+    if (Node.isExpression(expr) && !expr.isKind(SyntaxKind.Block)) {
+      redactExpression(expr, lines, inline, replace, blocks, priority)
     }
   }
 }
@@ -443,12 +447,13 @@ function redactArrowFunctionInitializer(
   const arrow = init.asKind(SyntaxKind.ArrowFunction)
   if (!arrow) return
   const body = arrow.getBody()
-  if (body.getKind() === SyntaxKind.Block) {
-    redactBlock(body, lines, inline, replace, blocks, priority)
+  const block = body.asKind(SyntaxKind.Block)
+  if (block) {
+    redactBlock(block, lines, inline, replace, blocks, priority)
     return
   }
-  if (!isExportedObjectLiteral(node)) {
-    redactExpression(body as Expression, lines, inline, replace, blocks, priority)
+  if (!isExportedObjectLiteral(node) && Node.isExpression(body)) {
+    redactExpression(body, lines, inline, replace, blocks, priority)
     return
   }
   const equals = node.getFirstChildByKind(SyntaxKind.EqualsToken)

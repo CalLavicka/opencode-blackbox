@@ -117,7 +117,10 @@ export const cube = (x: number): number => {
 
 export const identity = <T>(value: T): T => value
 
-export const compose = <A, B, C>(f: (b: B) => C, g: (a: A) => B) => (a: A): C => f(g(a))
+export const compose =
+  <A, B, C>(f: (b: B) => C, g: (a: A) => B) =>
+  (a: A): C =>
+    f(g(a))
 
 export const curry =
   <A, B, C>(fn: (a: A, b: B) => C) =>
@@ -150,10 +153,7 @@ export const delay = (ms: number): Promise<void> =>
     setTimeout(resolve, ms)
   })
 
-export async function retry<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = MAX_RETRIES
-): Promise<T> {
+export async function retry<T>(fn: () => Promise<T>, maxRetries: number = MAX_RETRIES): Promise<T> {
   let lastError: Error | undefined
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -185,10 +185,7 @@ export function* fibonacci(): Generator<number> {
   }
 }
 
-export async function* asyncRange(
-  start: number,
-  end: number
-): AsyncGenerator<number> {
+export async function* asyncRange(start: number, end: number): AsyncGenerator<number> {
   for (let i = start; i < end; i++) {
     await delay(10)
     yield i
@@ -380,7 +377,7 @@ export class Rectangle extends Shape {
 
   constructor(
     public width: number,
-    public height: number
+    public height: number,
   ) {
     super()
   }
@@ -413,7 +410,7 @@ export function memoize<T extends (...args: unknown[]) => unknown>(fn: T): T {
 
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
   return (...args: Parameters<T>) => {
@@ -429,7 +426,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 
 export function throttle<T extends (...args: unknown[]) => unknown>(
   fn: T,
-  limit: number
+  limit: number,
 ): (...args: Parameters<T>) => void {
   let inThrottle = false
   return (...args: Parameters<T>) => {
@@ -577,7 +574,7 @@ export function createCounter(initial: number = 0) {
 }
 
 export function createValidator<T>(
-  rules: Array<(value: T) => string | null>
+  rules: Array<(value: T) => string | null>,
 ): (value: T) => string[] {
   return (value: T) => {
     const errors: string[] = []

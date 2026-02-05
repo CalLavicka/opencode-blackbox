@@ -173,7 +173,9 @@ describe('redactOutput - comprehensive fixture', () => {
     expect(result).toBeDefined()
 
     // Signatures preserved
-    expect(result).toContain('export function* range(start: number, end: number, step: number = 1): Generator<number> {')
+    expect(result).toContain(
+      'export function* range(start: number, end: number, step: number = 1): Generator<number> {',
+    )
     expect(result).toContain('export function* fibonacci(): Generator<number> {')
 
     // Implementation hidden
@@ -229,7 +231,9 @@ describe('redactOutput - comprehensive fixture', () => {
     expect(result).toContain('An event emitter implementation')
 
     // Method signatures preserved
-    expect(result).toContain('on<K extends keyof T>(event: K, listener: (...args: T[K]) => void): () => void {')
+    expect(result).toContain(
+      'on<K extends keyof T>(event: K, listener: (...args: T[K]) => void): () => void {',
+    )
     expect(result).toContain('emit<K extends keyof T>(event: K, ...args: T[K]): void {')
 
     // Implementation hidden
@@ -282,7 +286,9 @@ describe('redactOutput - comprehensive fixture', () => {
     expect(result).toBeDefined()
 
     // Signatures preserved
-    expect(result).toContain('export function memoize<T extends (...args: unknown[]) => unknown>(fn: T): T {')
+    expect(result).toContain(
+      'export function memoize<T extends (...args: unknown[]) => unknown>(fn: T): T {',
+    )
     expect(result).toContain('export function debounce<T extends (...args: unknown[]) => unknown>')
     expect(result).toContain('export function throttle<T extends (...args: unknown[]) => unknown>')
 
@@ -327,7 +333,7 @@ describe('redactOutput - comprehensive fixture', () => {
     expect(result).toContain('export const stringUtils = {')
 
     // Arrow function implementations in object should be hidden
-    expect(result).not.toContain("str.charAt(0).toUpperCase() + str.slice(1)")
+    expect(result).not.toContain('str.charAt(0).toUpperCase() + str.slice(1)')
     expect(result).not.toContain("str.split('').reverse().join('')")
   })
 
