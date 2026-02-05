@@ -1,0 +1,57 @@
+/**
+ * File level doc comment.
+ */
+
+export interface User {
+  id: string
+  name: string
+}
+
+export type ApiResult<T> = {
+  data: T
+  ok: boolean
+}
+
+/**
+ * Adds numbers together.
+ */
+export function add(a: number, b: number): number {
+  // inline comment should be removed
+  return a + b
+}
+
+export function keepSignature(a: number, b: number): number {
+  const total = a + b
+  return total
+}
+
+export const multiply = (a: number, b: number) => a * b
+
+export const divide = (a: number, b: number) => {
+  return a / b
+}
+
+export class Counter {
+  /**
+   * Starting value.
+   */
+  private value: number = 0
+
+  constructor(initial: number) {
+    this.value = initial
+  }
+
+  get current(): number {
+    return this.value
+  }
+
+  set current(next: number) {
+    this.value = next
+  }
+
+  increment(by: number): number {
+    const next = this.value + by
+    this.value = next
+    return this.value
+  }
+}
