@@ -75,6 +75,26 @@ describe('redactFile', () => {
     expect(redacted).not.toContain('const internalValue = value + 1')
     expect(redacted).not.toContain('if (internalValue > 0)')
   })
+
+  test('keeps exported object literals but hides methods', async () => {
+    const input = await readFile(fixture, 'utf-8')
+    const redacted = redactFile(fixture, input)
+
+    expect(redacted).toContain('export const foo = {')
+    expect(redacted).toContain('  bar() {')
+    expect(redacted).toContain(`  ${hiddenLine}`)
+    expect(redacted).not.toContain('return 4')
+    expect(redacted).toContain('  value: 7,')
+  })
+
+  test('still hides exported arrow functions', async () => {
+    const input = await readFile(fixture, 'utf-8')
+    const redacted = redactFile(fixture, input)
+
+    expect(redacted).toContain('export const baz = () => {')
+    expect(redacted).toContain(`  ${hiddenLine}`)
+    expect(redacted).not.toContain('return 6')
+  })
 })
 
 describe('redactOutput', () => {

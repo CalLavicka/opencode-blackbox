@@ -31,6 +31,17 @@ export const divide = (a: number, b: number) => {
   return a / b
 }
 
+export const foo = {
+  bar() {
+    return 4
+  },
+  value: 7,
+}
+
+export const baz = () => {
+  return 6
+}
+
 export function exportedWithInternals(value: number) {
   // internal comment should be hidden
   const internalValue = value + 1

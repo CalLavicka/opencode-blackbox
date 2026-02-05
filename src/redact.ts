@@ -100,10 +100,16 @@ export function redactFile(filePath: string, text: string, window?: LineWindow) 
     redactBlock(body, lines, inline, replace, blocks, 10)
   }
 
+  for (const node of file.getDescendantsOfKind(SyntaxKind.ClassDeclaration)) {
+    if (!node.isExported()) {
+      hideDeclaration(node, blocks, 5)
+    }
+  }
+
   for (const node of file.getDescendantsOfKind(SyntaxKind.MethodDeclaration)) {
     const body = node.getBody()
     if (!body) continue
-    if (isPublicExportedMember(node)) {
+    if (isPublicExportedMember(node) || isExportedObjectLiteralMember(node)) {
       redactBlock(body, lines, inline, replace, blocks, 10)
       continue
     }
@@ -142,7 +148,9 @@ export function redactFile(filePath: string, text: string, window?: LineWindow) 
 
   for (const node of file.getDescendantsOfKind(SyntaxKind.PropertyDeclaration)) {
     if (!node.getInitializer()) continue
-    if (isPublicExportedMember(node)) {
+    // For properties in exported classes (both public and private), redact the initializer
+    // For properties in non-exported classes, hide the entire declaration
+    if (isInExportedClass(node)) {
       redactPropertyInitializer(node, lines, inline, replace, blocks, 6)
       continue
     }
@@ -174,26 +182,28 @@ export function redactFile(filePath: string, text: string, window?: LineWindow) 
 
   for (const node of file.getDescendantsOfKind(SyntaxKind.VariableDeclaration)) {
     if (isExportedVariable(node)) {
-      if (node.getInitializer()) {
-        redactVariableInitializer(node, lines, inline, replace, blocks, 2)
-      }
       continue
     }
     hideDeclaration(node, blocks, 4)
   }
 
   for (const node of file.getDescendantsOfKind(SyntaxKind.ArrowFunction)) {
+    if (isExportedArrowFunctionInObjectLiteral(node)) {
+      redactFunctionBody(node, lines, inline, replace, blocks, 10)
+      continue
+    }
     if (!isExportedArrowFunction(node)) continue
     const body = node.getBody()
     if (body.getKind() === SyntaxKind.Block) {
-      redactBlock(body, lines, inline, replace, blocks, 1)
+      redactBlock(body, lines, inline, replace, blocks, 5)
       continue
     }
-    redactExpression(body as Expression, lines, inline, replace, blocks, 1)
+    redactExpression(body as Expression, lines, inline, replace, blocks, 5)
   }
 
   for (const node of file.getDescendantsOfKind(SyntaxKind.FunctionExpression)) {
     if (!isExportedFunctionExpression(node)) continue
+    if (isExportedFunctionExpressionInObjectLiteral(node)) continue
     const body = node.getBody()
     if (!body) continue
     redactBlock(body, lines, inline, replace, blocks, 2)
@@ -209,14 +219,55 @@ function hideDeclaration(node: Node, blocks: BlockEdit[], priority: number) {
   blocks.push({ start: startLine, end: Math.max(endLine, startLine), line: startLine, priority })
 }
 
+function isInExportedClass(node: Node) {
+  const parent = node.getParentIfKind(SyntaxKind.ClassDeclaration)
+  if (!parent) return false
+  return parent.isExported()
+}
+
 function isPublicExportedMember(node: Node) {
   const parent = node.getParentIfKind(SyntaxKind.ClassDeclaration)
   if (!parent) return false
   if (!parent.isExported()) return false
+  // Use hasModifier if available (for methods, constructors, accessors, properties)
+  // because getFirstChildByKind doesn't find modifiers inside the SyntaxList
+  if ('hasModifier' in node && typeof node.hasModifier === 'function') {
+    const hasPrivate = node.hasModifier(SyntaxKind.PrivateKeyword)
+    const hasProtected = node.hasModifier(SyntaxKind.ProtectedKeyword)
+    return !hasPrivate && !hasProtected
+  }
   const privateToken = node.getFirstChildByKind(SyntaxKind.PrivateKeyword)
   if (privateToken) return false
   const protectedToken = node.getFirstChildByKind(SyntaxKind.ProtectedKeyword)
   return !protectedToken
+}
+
+function isExportedObjectLiteral(node: Node) {
+  const objectLiteral = node.asKind(SyntaxKind.ObjectLiteralExpression)
+  if (!objectLiteral) return false
+  const variable = objectLiteral.getParentIfKind(SyntaxKind.VariableDeclaration)
+  if (!variable) return false
+  return isExportedVariable(variable)
+}
+
+function isExportedObjectLiteralMember(node: Node) {
+  const objectLiteral = node.getParentIfKind(SyntaxKind.ObjectLiteralExpression)
+  if (!objectLiteral) return false
+  const variable = objectLiteral.getParentIfKind(SyntaxKind.VariableDeclaration)
+  if (!variable) return false
+  return isExportedVariable(variable)
+}
+
+function isExportedArrowFunctionInObjectLiteral(node: Node) {
+  const property = node.getParentIfKind(SyntaxKind.PropertyAssignment)
+  if (!property) return false
+  return isExportedObjectLiteralMember(property)
+}
+
+function isExportedFunctionExpressionInObjectLiteral(node: Node) {
+  const property = node.getParentIfKind(SyntaxKind.PropertyAssignment)
+  if (!property) return false
+  return isExportedObjectLiteralMember(property)
 }
 
 function redactExportedIdentifier(
@@ -306,6 +357,142 @@ function redactExpression(
   blocks.push({ start: start.line, end: end.line, line: start.line, priority })
 }
 
+function redactFunctionBody(
+  node: Node,
+  lines: string[],
+  inline: InlineEdit[],
+  replace: LineEdit[],
+  blocks: BlockEdit[],
+  priority: number,
+) {
+  const body = node.getFirstChildByKind(SyntaxKind.Block)
+  if (body) {
+    redactBlock(body, lines, inline, replace, blocks, priority)
+    return
+  }
+  if (node.getKind() === SyntaxKind.ArrowFunction) {
+    const expr = node.asKindOrThrow(SyntaxKind.ArrowFunction).getBody()
+    if (expr.getKind() !== SyntaxKind.Block) {
+      redactExpression(expr as Expression, lines, inline, replace, blocks, priority)
+    }
+  }
+}
+
+function redactObjectLiteralFunctions(
+  node: Node,
+  lines: string[],
+  inline: InlineEdit[],
+  replace: LineEdit[],
+  blocks: BlockEdit[],
+  priority: number,
+) {
+  const properties = node.getChildrenOfKind(SyntaxKind.PropertyAssignment)
+  for (const property of properties) {
+    const initializer = property.getInitializer()
+    if (!initializer) continue
+    if (initializer.getKind() === SyntaxKind.ArrowFunction) {
+      redactArrowFunctionInitializer(
+        property,
+        initializer,
+        lines,
+        inline,
+        replace,
+        blocks,
+        priority,
+      )
+      continue
+    }
+    if (initializer.getKind() === SyntaxKind.FunctionExpression) {
+      redactFunctionExpressionInitializer(
+        property,
+        initializer,
+        lines,
+        inline,
+        replace,
+        blocks,
+        priority,
+      )
+    }
+  }
+
+  const accessors = node.getChildrenOfKind(SyntaxKind.GetAccessor)
+  for (const accessor of accessors) {
+    redactFunctionBody(accessor, lines, inline, replace, blocks, priority)
+  }
+
+  const setAccessors = node.getChildrenOfKind(SyntaxKind.SetAccessor)
+  for (const accessor of setAccessors) {
+    redactFunctionBody(accessor, lines, inline, replace, blocks, priority)
+  }
+
+  const methods = node.getChildrenOfKind(SyntaxKind.MethodDeclaration)
+  for (const method of methods) {
+    redactFunctionBody(method, lines, inline, replace, blocks, priority)
+  }
+}
+
+function redactArrowFunctionInitializer(
+  node: Node,
+  init: Node,
+  lines: string[],
+  inline: InlineEdit[],
+  replace: LineEdit[],
+  blocks: BlockEdit[],
+  priority: number,
+) {
+  const arrow = init.asKind(SyntaxKind.ArrowFunction)
+  if (!arrow) return
+  const body = arrow.getBody()
+  if (body.getKind() === SyntaxKind.Block) {
+    redactBlock(body, lines, inline, replace, blocks, priority)
+    return
+  }
+  if (!isExportedObjectLiteral(node)) {
+    redactExpression(body as Expression, lines, inline, replace, blocks, priority)
+    return
+  }
+  const equals = node.getFirstChildByKind(SyntaxKind.EqualsToken)
+  if (!equals) return
+  const start = lineCol(node, equals.getStart())
+  const end = lineCol(node, body.getEnd())
+
+  if (start.line === end.line) {
+    inline.push({
+      line: start.line,
+      start: start.column,
+      end: end.column,
+      text: `= ${hiddenInline}`,
+    })
+    return
+  }
+
+  const first = lines[start.line - 1] ?? ''
+  const prefix = first.slice(0, start.column - 1).trimEnd()
+  replace.push({ line: start.line, text: `${prefix}= ${hiddenInline}` })
+
+  const last = lines[end.line - 1] ?? ''
+  const indent = last.match(/^\s*/)?.[0] ?? ''
+  replace.push({ line: end.line, text: `${indent}${last.slice(end.column - 1).trimStart()}` })
+
+  blocks.push({ start: start.line + 1, end: end.line - 1, line: start.line + 1, priority })
+}
+
+function redactFunctionExpressionInitializer(
+  node: Node,
+  init: Node,
+  lines: string[],
+  inline: InlineEdit[],
+  replace: LineEdit[],
+  blocks: BlockEdit[],
+  priority: number,
+) {
+  const fn = init.asKind(SyntaxKind.FunctionExpression)
+  if (!fn) return
+  const body = fn.getBody()
+  if (!body) return
+  redactBlock(body, lines, inline, replace, blocks, priority)
+}
+
 function redactPropertyInitializer(
   node: PropertyDeclaration,
   lines: string[],
@@ -355,6 +542,21 @@ function redactVariableInitializer(
   if (!init) return
   const equals = node.getFirstChildByKind(SyntaxKind.EqualsToken)
   if (!equals) return
+
+  if (isExportedObjectLiteral(init)) {
+    redactObjectLiteralFunctions(init, lines, inline, replace, blocks, priority)
+    return
+  }
+
+  if (init.getKind() === SyntaxKind.ArrowFunction) {
+    redactArrowFunctionInitializer(node, init, lines, inline, replace, blocks, priority)
+    return
+  }
+
+  if (init.getKind() === SyntaxKind.FunctionExpression) {
+    redactFunctionExpressionInitializer(node, init, lines, inline, replace, blocks, priority)
+    return
+  }
 
   const start = lineCol(node, equals.getStart())
   const end = lineCol(node, init.getEnd())
