@@ -28,4 +28,13 @@ describe('redactFile', () => {
     expect(redacted).toContain(`= ${hiddenInline}`)
     expect(redacted).toContain('private value: number')
   })
+
+  test('hides non-exported helpers entirely', async () => {
+    const input = await readFile(fixture, 'utf-8')
+    const redacted = redactFile(fixture, input)
+
+    expect(redacted).not.toContain('function helperSecret')
+    expect(redacted).not.toContain('const hiddenValue = 42')
+    expect(redacted).toContain(hiddenLine)
+  })
 })

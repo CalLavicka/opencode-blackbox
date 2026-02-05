@@ -31,6 +31,12 @@ export const divide = (a: number, b: number) => {
   return a / b
 }
 
+function helperSecret(value: number) {
+  return value * 2
+}
+
+const hiddenValue = 42
+
 export class Counter {
   /**
    * Starting value.
