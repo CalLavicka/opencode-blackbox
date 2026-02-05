@@ -2,7 +2,7 @@ import {
   SyntaxKind,
   type Expression,
   type Node,
-  type SourceFile,
+  type PropertyDeclaration,
   type VariableDeclaration,
 } from 'ts-morph'
 import { sourceFile } from './ast'
@@ -97,10 +97,57 @@ export function redactFile(filePath: string, text: string, window?: LineWindow) 
     }
     const body = node.getBody()
     if (!body) continue
-    redactBlock(body, lines, inline, replace, blocks, 3)
+    redactBlock(body, lines, inline, replace, blocks, 10)
   }
 
-  hideNonExportedClassMembers(file, blocks)
+  for (const node of file.getDescendantsOfKind(SyntaxKind.MethodDeclaration)) {
+    const body = node.getBody()
+    if (!body) continue
+    if (isPublicExportedMember(node)) {
+      redactBlock(body, lines, inline, replace, blocks, 10)
+      continue
+    }
+    hideDeclaration(node, blocks, 4)
+  }
+
+  for (const node of file.getDescendantsOfKind(SyntaxKind.Constructor)) {
+    const body = node.getBody()
+    if (!body) continue
+    if (isPublicExportedMember(node)) {
+      redactBlock(body, lines, inline, replace, blocks, 10)
+      continue
+    }
+    hideDeclaration(node, blocks, 4)
+  }
+
+  for (const node of file.getDescendantsOfKind(SyntaxKind.GetAccessor)) {
+    const body = node.getBody()
+    if (!body) continue
+    if (isPublicExportedMember(node)) {
+      redactBlock(body, lines, inline, replace, blocks, 10)
+      continue
+    }
+    hideDeclaration(node, blocks, 4)
+  }
+
+  for (const node of file.getDescendantsOfKind(SyntaxKind.SetAccessor)) {
+    const body = node.getBody()
+    if (!body) continue
+    if (isPublicExportedMember(node)) {
+      redactBlock(body, lines, inline, replace, blocks, 10)
+      continue
+    }
+    hideDeclaration(node, blocks, 4)
+  }
+
+  for (const node of file.getDescendantsOfKind(SyntaxKind.PropertyDeclaration)) {
+    if (!node.getInitializer()) continue
+    if (isPublicExportedMember(node)) {
+      redactPropertyInitializer(node, lines, inline, replace, blocks, 6)
+      continue
+    }
+    hideDeclaration(node, blocks, 4)
+  }
 
   for (const node of file.getDescendantsOfKind(SyntaxKind.ExportAssignment)) {
     const expr = node.getExpression()
@@ -154,34 +201,6 @@ export function redactFile(filePath: string, text: string, window?: LineWindow) 
 
   applyEdits(lines, inline, replace, blocks, window)
   return lines.join('\n')
-}
-
-function hideNonExportedClassMembers(file: SourceFile, blocks: BlockEdit[]) {
-  for (const member of file.getDescendantsOfKind(SyntaxKind.MethodDeclaration)) {
-    if (isPublicExportedMember(member)) continue
-    hideDeclaration(member, blocks, 4)
-  }
-
-  for (const member of file.getDescendantsOfKind(SyntaxKind.Constructor)) {
-    if (isPublicExportedMember(member)) continue
-    hideDeclaration(member, blocks, 4)
-  }
-
-  for (const member of file.getDescendantsOfKind(SyntaxKind.GetAccessor)) {
-    if (isPublicExportedMember(member)) continue
-    hideDeclaration(member, blocks, 4)
-  }
-
-  for (const member of file.getDescendantsOfKind(SyntaxKind.SetAccessor)) {
-    if (isPublicExportedMember(member)) continue
-    hideDeclaration(member, blocks, 4)
-  }
-
-  for (const member of file.getDescendantsOfKind(SyntaxKind.PropertyDeclaration)) {
-    if (!member.getInitializer()) continue
-    if (isPublicExportedMember(member)) continue
-    hideDeclaration(member, blocks, 4)
-  }
 }
 
 function hideDeclaration(node: Node, blocks: BlockEdit[], priority: number) {
@@ -262,6 +281,9 @@ function redactBlock(
     return
   }
 
+  const baseLine = lines[startLine - 1] ?? ''
+  const indent = baseLine.match(/^\s*/)?.[0] ?? ''
+  replace.push({ line: startLine + 1, text: `${indent}${hiddenLine}` })
   blocks.push({ start: startLine + 1, end: endLine - 1, line: startLine + 1, priority })
 }
 
@@ -282,6 +304,43 @@ function redactExpression(
   }
 
   blocks.push({ start: start.line, end: end.line, line: start.line, priority })
+}
+
+function redactPropertyInitializer(
+  node: PropertyDeclaration,
+  lines: string[],
+  inline: InlineEdit[],
+  replace: LineEdit[],
+  blocks: BlockEdit[],
+  priority: number,
+) {
+  const init = node.getInitializer()
+  if (!init) return
+  const equals = node.getFirstChildByKind(SyntaxKind.EqualsToken)
+  if (!equals) return
+
+  const start = lineCol(node, equals.getStart())
+  const end = lineCol(node, init.getEnd())
+
+  if (start.line === end.line) {
+    inline.push({
+      line: start.line,
+      start: start.column,
+      end: end.column,
+      text: `= ${hiddenInline}`,
+    })
+    return
+  }
+
+  const first = lines[start.line - 1] ?? ''
+  const prefix = first.slice(0, start.column - 1).trimEnd()
+  replace.push({ line: start.line, text: `${prefix}= ${hiddenInline}` })
+
+  const last = lines[end.line - 1] ?? ''
+  const indent = last.match(/^\s*/)?.[0] ?? ''
+  replace.push({ line: end.line, text: `${indent}${last.slice(end.column - 1).trimStart()}` })
+
+  blocks.push({ start: start.line + 1, end: end.line - 1, line: start.line + 1, priority })
 }
 
 function redactVariableInitializer(
@@ -347,6 +406,10 @@ function applyEdits(
 
     for (let i = block.line + 1; i <= block.end; i += 1) {
       lines[i - 1] = ''
+    }
+
+    if (block.start !== block.line && block.start >= 1 && block.start <= lines.length) {
+      lines[block.start - 1] = ''
     }
   }
 
