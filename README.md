@@ -84,7 +84,6 @@ const hiddenValue = 42
 // after
 export function add(a: number, b: number): number {
   // implementation hidden
-
 }
 
 // implementation hidden
