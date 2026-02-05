@@ -1,6 +1,6 @@
 {
   "name": "opencode-blackbox",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "Cal Lavicka <cal@assert.dev> (https://assert.dev)",
   "files": [
     "dist",
