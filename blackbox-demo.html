@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blackbox Redaction Demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1120;
+        --panel: #0f172a;
+        --border: #1f2937;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #a78bfa;
+        --type: #38bdf8;
+        --comment: #64748b;
+        --warn: #f97316;
+        --string: #34d399;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+
+      .canvas {
+        width: 1200px;
+        height: 675px;
+        padding: 48px 64px;
+        background: var(--bg);
+        border-radius: 28px;
+        border: 1px solid var(--border);
+        display: flex;
+      }
+
+      .stack {
+        width: 100%;
+        max-width: 940px;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 22px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .panel-title {
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      pre {
+        margin: 0;
+        font-family: 'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+          'Courier New', monospace;
+        font-size: 18px;
+        line-height: 1.55;
+        white-space: pre;
+      }
+
+      .arrow {
+        text-align: center;
+        font-size: 34px;
+        color: var(--comment);
+        line-height: 1;
+      }
+
+      .kw {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .fn {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .type {
+        color: var(--type);
+      }
+
+      .comment {
+        color: var(--comment);
+      }
+
+      .warn {
+        color: var(--warn);
+        font-weight: 600;
+      }
+
+      .string {
+        color: var(--string);
+      }
+
+      .punct,
+      .operator {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="canvas">
+      <section class="stack">
+        <article class="panel">
+          <div class="panel-title">Original</div>
+          <pre><span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">fetchBillingSummary</span><span class="punct">(</span>
+  accountId<span class="punct">:</span> <span class="type">string</span><span class="punct">,</span>
+<span class="punct">)</span><span class="punct">:</span> <span class="type">Promise</span><span class="punct">&lt;</span><span class="type">BillingSummary</span><span class="punct">&gt;</span> <span class="punct">{</span>
+  <span class="kw">const</span> response <span class="operator">=</span> <span class="kw">await</span> api.get<span class="punct">(</span><span class="string">`/billing/${accountId}`</span><span class="punct">)</span>
+  <span class="kw">return</span> response.json<span class="punct">()</span>
+<span class="punct">}</span></pre>
+        </article>
+
+        <div class="arrow">↓</div>
+
+        <article class="panel">
+          <div class="panel-title">Redacted</div>
+          <pre><span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">fetchBillingSummary</span><span class="punct">(</span>
+  accountId<span class="punct">:</span> <span class="type">string</span><span class="punct">,</span>
+<span class="punct">)</span><span class="punct">:</span> <span class="type">Promise</span><span class="punct">&lt;</span><span class="type">BillingSummary</span><span class="punct">&gt;</span> <span class="punct">{</span>
+  <span class="warn">// implementation hidden</span>
+<span class="punct">}</span></pre>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

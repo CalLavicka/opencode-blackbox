@@ -1,12 +1,8 @@
 # opencode-blackbox
 
-Redacts implementation details in file reads for selected OpenCode agents.
+Redacts implementation details in file reads so testing agents can run true blackbox checks without seeing your implementation.
 
-## Install
-
-```bash
-bun install
-```
+![Blackbox redaction demo](blackbox-demo.png)
 
 ## Enable in OpenCode
 
