@@ -8,6 +8,11 @@ type AgentInfo = {
   options: Record<string, unknown>
 }
 
+type ReminderConfig = {
+  inline: string
+  attachment: string
+}
+
 type FilePart = {
   type: 'file'
   mime: string
@@ -68,6 +73,27 @@ const plugin: Plugin = async (ctx) => {
 
   const sessionToAgent = new Map<string, string>()
 
+  const defaultReminders: ReminderConfig = {
+    inline:
+      '<system-reminder>\nImplementation redacted by opencode-blackbox; signatures and structure are intact.\n</system-reminder>',
+    attachment:
+      '<system-reminder>\nSome attached files were redacted by opencode-blackbox.\n</system-reminder>',
+  }
+
+  const resolveReminders = (agent: AgentInfo | undefined): ReminderConfig => {
+    const overrides = agent?.options?.['blackboxReminders']
+    if (!overrides || typeof overrides !== 'object') return defaultReminders
+
+    const record = overrides as Record<string, unknown>
+    const inline = typeof record.inline === 'string' ? record.inline : undefined
+    const attachment = typeof record.attachment === 'string' ? record.attachment : undefined
+
+    return {
+      inline: inline ?? defaultReminders.inline,
+      attachment: attachment ?? defaultReminders.attachment,
+    }
+  }
+
   return {
     'chat.message': async (input) => {
       const agent = input.agent
@@ -87,6 +113,7 @@ const plugin: Plugin = async (ctx) => {
       const allow = allowCache.get(agentName) ?? parseAllowed(agent)
       allowCache.set(agentName, allow)
 
+      const reminders = resolveReminders(agent)
       const basePath = ctx.worktree ?? ctx.directory
       for (const message of output.messages) {
         if (message.info.role !== 'user') continue
@@ -168,7 +195,7 @@ const plugin: Plugin = async (ctx) => {
           const updated = await redactOutput(absolutePath, outputText)
           if (!updated) continue
 
-          next.text = `${updated}\n\n<system-reminder>\nImplementation redacted by opencode-blackbox; signatures and structure are intact.\n</system-reminder>`
+          next.text = `${updated}\n\n${reminders.inline}`
           next.metadata = {
             ...next.metadata,
             redacted: true,
@@ -184,7 +211,7 @@ const plugin: Plugin = async (ctx) => {
         if (message.parts.some((p) => isTextPart(p) && p.metadata?.redaction)) continue
         const firstText = message.parts.find((p) => isTextPart(p))
         if (!firstText) continue
-        firstText.text = `${firstText.text}\n\n<system-reminder>\nSome attached files were redacted by opencode-blackbox.\n</system-reminder>`
+        firstText.text = `${firstText.text}\n\n${reminders.attachment}`
         firstText.metadata = {
           ...firstText.metadata,
           redaction: true,
@@ -224,7 +251,8 @@ const plugin: Plugin = async (ctx) => {
       const updated = await redactOutput(output.title, output.output)
       if (!updated) return
 
-      output.output = `${updated}\n\n<system-reminder>\nImplementation redacted by opencode-blackbox; signatures and structure are intact.\n</system-reminder>`
+      const reminders = resolveReminders(agent)
+      output.output = `${updated}\n\n${reminders.inline}`
       output.metadata = {
         ...output.metadata,
         redacted: true,

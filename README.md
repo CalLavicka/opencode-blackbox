@@ -46,6 +46,23 @@ Notes:
 
 - Only `read` output is redacted; files written in the same session are never redacted.
 - Line counts are preserved and only implementation bodies/initializers are hidden.
+- You can customize reminder copy with `options.blackboxReminders`; reminders appear in the model-facing prompt alongside redacted output.
+
+```jsonc
+{
+  "agent": {
+    "test-builder": {
+      "options": {
+        "blackbox": true,
+        "blackboxReminders": {
+          "inline": "<system-reminder>\nImplementation redacted.\n</system-reminder>",
+          "attachment": "<system-reminder>\nSome attachments were redacted.\n</system-reminder>",
+        },
+      },
+    },
+  },
+}
+```
 
 ## Agent file alternative
 
