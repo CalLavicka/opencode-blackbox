@@ -10,14 +10,6 @@ bun install
 
 ## Enable in OpenCode
 
-OpenCode loads plugins from `.opencode/plugins/` (project) or `~/.config/opencode/plugins/` (global). For a local checkout, symlink the plugin entrypoint:
-
-```bash
-ln -s ../opencode-blackbox/src/index.ts ../opencode/.opencode/plugins/blackbox.ts
-```
-
-If this gets published to npm later, add it to your config instead:
-
 ```json
 {
   "$schema": "https://opencode.ai/config.json",

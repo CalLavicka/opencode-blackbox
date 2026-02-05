@@ -13,6 +13,27 @@ const plugin: Plugin = async (ctx) => {
   const allowCache = new Map<string, ReturnType<typeof parseAllowed>>()
   const written = new Map<string, Set<string>>()
 
+  const log = async (
+    level: 'debug' | 'info' | 'warn' | 'error',
+    message: string,
+    extra?: Record<string, unknown>,
+  ) => {
+    try {
+      await ctx.client.app.log({
+        body: {
+          service: 'opencode-blackbox',
+          level,
+          message,
+          extra,
+        },
+      })
+    } catch (error) {
+      console.error('opencode-blackbox log failed', error)
+    }
+  }
+
+  void log('info', 'Plugin initialized')
+
   const agentsPromise = ctx.client.app
     .agents({ query: { directory: ctx.directory } })
     .then((result) => {
@@ -60,10 +81,22 @@ const plugin: Plugin = async (ctx) => {
       allowCache.set(agentName, allow)
       if (matchesAny(filePath, allow)) return
 
-      const updated = redactOutput(output.title, output.output)
+      const updated = await redactOutput(output.title, output.output)
       if (!updated) return
 
-      output.output = updated
+      output.output = `${updated}\n\n<system-reminder>\nImplementation redacted by opencode-blackbox; signatures and structure are intact.\n</system-reminder>`
+      output.metadata = {
+        ...(output.metadata ?? {}),
+        redacted: true,
+        redaction: {
+          policy: 'blackbox',
+          placeholder: 'implementation hidden',
+        },
+      }
+      void log('info', 'Redacted tool output', {
+        filePath,
+        agent: agentName,
+      })
     },
   }
 }
