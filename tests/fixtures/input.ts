@@ -31,11 +31,37 @@ export const divide = (a: number, b: number) => {
   return a / b
 }
 
+export const foo = {
+  bar() {
+    return 4
+  },
+  value: 7,
+}
+
+export const baz = () => {
+  return 6
+}
+
+export function exportedWithInternals(value: number) {
+  // internal comment should be hidden
+  const internalValue = value + 1
+  if (internalValue > 0) {
+    return internalValue
+  }
+  return 0
+}
+
 function helperSecret(value: number) {
   return value * 2
 }
 
 const hiddenValue = 42
+
+const plugin = (value: number) => {
+  return value + 1
+}
+
+export default plugin
 
 export class Counter {
   /**

@@ -38,3 +38,20 @@ test('hello world', () => {
   expect(1).toBe(1)
 })
 ```
+
+## ts-morph Guidelines
+
+When working with ts-morph AST nodes:
+
+- **Avoid `as` type assertions** - Use ts-morph's built-in narrowing methods instead:
+  - `node.asKind(SyntaxKind.X)` returns the narrowed type or `undefined`
+  - `node.asKindOrThrow(SyntaxKind.X)` returns the narrowed type or throws
+  - `node.isKind(SyntaxKind.X)` is a type guard that narrows `this`
+
+- **Avoid `'property' in node` checks** - Use ts-morph's static type guards:
+  - `Node.isModifierable(node)` - checks if node has `hasModifier()` method
+  - `Node.isExpression(node)` - checks if node is an `Expression`
+  - `Node.isBodied(node)` - checks if node has `getBody()` method
+  - See `Node.is*` methods in ts-morph for the full list
+
+- **Import `Node` as a value** (not `type Node`) when using static type guards like `Node.isExpression()`

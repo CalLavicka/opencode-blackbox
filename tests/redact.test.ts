@@ -38,6 +38,15 @@ describe('redactFile', () => {
     expect(redacted).toContain(hiddenLine)
   })
 
+  test('hides default-exported non-exported wrappers', async () => {
+    const input = await readFile(fixture, 'utf-8')
+    const redacted = redactFile(fixture, input)
+
+    expect(redacted).not.toContain('const plugin =')
+    expect(redacted).not.toContain('value + 1')
+    expect(redacted).toContain(hiddenLine)
+  })
+
   test('partial redaction with window parameter', async () => {
     const input = await readFile(fixture, 'utf-8')
     // Window covers lines 18-26 (1-indexed), which includes the add and keepSignature functions
@@ -54,8 +63,37 @@ describe('redactFile', () => {
     expect(lines[17]).toBe('export function add(a: number, b: number): number {')
     // Line 19 (index 18) should be redacted
     expect(lines[18]).toContain(hiddenLine)
-    // Line 20 (index 19) was 'return a + b' - should be empty after redaction
+    // Line 20 (index 19) was 'return a + b' - should be removed
     expect(lines[19]).toBe('')
+  })
+
+  test('fully redacts exported bodies', async () => {
+    const input = await readFile(fixture, 'utf-8')
+    const redacted = redactFile(fixture, input)
+
+    expect(redacted).not.toContain('internal comment should be hidden')
+    expect(redacted).not.toContain('const internalValue = value + 1')
+    expect(redacted).not.toContain('if (internalValue > 0)')
+  })
+
+  test('keeps exported object literals but hides methods', async () => {
+    const input = await readFile(fixture, 'utf-8')
+    const redacted = redactFile(fixture, input)
+
+    expect(redacted).toContain('export const foo = {')
+    expect(redacted).toContain('  bar() {')
+    expect(redacted).toContain(`  ${hiddenLine}`)
+    expect(redacted).not.toContain('return 4')
+    expect(redacted).toContain('  value: 7,')
+  })
+
+  test('still hides exported arrow functions', async () => {
+    const input = await readFile(fixture, 'utf-8')
+    const redacted = redactFile(fixture, input)
+
+    expect(redacted).toContain('export const baz = () => {')
+    expect(redacted).toContain(`  ${hiddenLine}`)
+    expect(redacted).not.toContain('return 6')
   })
 })
 
