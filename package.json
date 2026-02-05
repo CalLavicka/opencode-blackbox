@@ -2,6 +2,10 @@
   "name": "opencode-blackbox",
   "version": "0.0.2",
   "author": "Cal Lavicka <cal@assert.dev> (https://assert.dev)",
+  "files": [
+    "dist",
+    "src"
+  ],
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -12,10 +16,6 @@
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist",
-    "src"
-  ],
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --format esm --target bun",
     "format": "oxfmt",

@@ -88,13 +88,16 @@ const plugin: Plugin = async (ctx) => {
       allowCache.set(agentName, allow)
 
       const basePath = ctx.worktree ?? ctx.directory
-      let didRedact = false
-
       for (const message of output.messages) {
+        if (message.info.role !== 'user') continue
+
         const parts = message.parts
+        let didRedact = false
+
         for (let index = 0; index < parts.length; index += 1) {
           const part = parts[index]
           if (!part) continue
+
           if (isFilePart(part)) {
             const filePart = part
             if (!filePart.filename) continue
@@ -188,6 +191,7 @@ const plugin: Plugin = async (ctx) => {
         }
       }
     },
+
     'tool.execute.after': async (input, output) => {
       if (input.tool === 'write') {
         const filepath = output.metadata.filepath
