@@ -64,6 +64,34 @@ Notes:
 }
 ```
 
+## Example redaction
+
+```ts
+// before
+export function add(a: number, b: number): number {
+  const value = helperSecret()
+  return a + b + value + hiddenValue
+}
+
+function helperSecret(value: number) {
+  return value * 2
+}
+
+const hiddenValue = 42
+```
+
+```ts
+// after
+export function add(a: number, b: number): number {
+  // implementation hidden
+
+}
+
+// implementation hidden
+
+// implementation hidden
+```
+
 ## Agent file alternative
 
 You can define the same agent in a file under `.opencode/agents/`:
